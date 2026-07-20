@@ -1,5 +1,9 @@
 import Restaurant from "../models/restaurant.model.js";
+import User from "../models/user.model.js";
+import { ApiError } from "../utils/ApiError";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import jwt from "jsonwebtoken";
+import Booking from "../models/booking.model.js";
 
 export const getRestaurants = async (req, res) => {
   try {
@@ -139,22 +143,108 @@ export const getFeaturedRestaurants = async (req, res) => {
 
 export const getRestaurantBySlug = async (req, res) => {
   try {
-  } catch (error) {
-    console.error("getRestaurantBySlug Controller Error:", error);
+    const { slug } = req.params;
 
-    return res.status(500).json({
+    const restaurant = await Restaurant.findOne({ slug });
+
+    if (!restaurant) {
+      throw new ApiError(404, "Restaurant not found!");
+    }
+
+    if (restaurant.status !== "approved") {
+      if (!req.user) {
+        throw new ApiError(404, "Restaurant not found!");
+      }
+
+      const isOwner = restaurant.owner.toString() === req.user._id.toString();
+
+      if (req.user.role !== "admin" && !isOwner) {
+        throw new ApiError(403, "Access denied!");
+      }
+    }
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, restaurant, "Restaurant fetched successfully"),
+      );
+  } catch (error) {
+    console.error("Get Restaurant By Slug Error:", error);
+
+    return res.status(error.statusCode || 500).json({
       success: false,
-      message: error.message || "Internal Server Error",
+      message: error.message,
     });
   }
 };
 
 export const getRestaurantAvailability = async (req, res) => {
   try {
+    const { id } = req.params;
+    const { date } = req.query;
+
+    if (!date) {
+      throw new ApiError(400, "Please provide a booking date!");
+    }
+
+    const restaurant = await Restaurant.findById(id);
+
+    if (!restaurant) {
+      throw new ApiError(404, "Restaurant not found!");
+    }
+
+    // Start & End of selected date
+    const startDate = new Date(date);
+    startDate.setHours(0, 0, 0, 0);
+
+    const endDate = new Date(date);
+    endDate.setHours(23, 59, 59, 999);
+
+    const bookings = await Booking.find({
+      restaurant: id,
+      bookingDate: {
+        $gte: startDate,
+        $lte: endDate,
+      },
+      status: "confirmed",
+    });
+
+    const availability = restaurant.availableSlots.map((slot) => {
+      const slotBookings = bookings.filter(
+        (booking) => booking.bookingTime === slot,
+      );
+
+      const bookedSeats = slotBookings.reduce(
+        (total, booking) => total + booking.guests,
+        0,
+      );
+
+      const availableSeats = Math.max(restaurant.totalSeats - bookedSeats, 0);
+
+      return {
+        slot,
+        totalSeats: restaurant.totalSeats,
+        bookedSeats,
+        availableSeats,
+        isAvailable: availableSeats > 0,
+      };
+    });
+
+    return res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          restaurant: restaurant.name,
+          date,
+          availability,
+        },
+        "Availability fetched successfully",
+      ),
+    );
   } catch (error) {
     console.error("getRestaurantAvailability Controller Error:", error);
 
-    return res.status(500).json({
+    return res.status(error.statusCode || 500).json({
       success: false,
       message: error.message || "Internal Server Error",
     });
