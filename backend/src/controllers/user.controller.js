@@ -1,6 +1,7 @@
 import User from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { generateToken } from "../utils/generateToken.js";
 
 export const registerUser = async (req, res) => {
   try {
@@ -56,13 +57,42 @@ export const loginUser = async (req, res) => {
       throw new ApiError(400, "Invalid credientials!");
     }
 
+    const token = await generateToken(user);
+
     const safeUser = await User.findById(user._id).select("-password");
+
+    return res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          safeUser,
+          token,
+        },
+        "user login successfully",
+      ),
+    );
+  } catch (error) {
+    console.error("login Controller Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+export const getMe = async (req, res) => {
+  try {
+    if (!req.user) {
+      throw new ApiError(401, "Not authorized");
+    }
 
     return res
       .status(200)
-      .json(new ApiResponse(200, safeUser, "user login successfully"));
+      .json(new ApiResponse(200, req.user, "User fetched successfully!"));
+      
   } catch (error) {
-    console.error("login Controller Error:", error);
+    console.error("getMe Controller Error:", error);
 
     return res.status(500).json({
       success: false,
