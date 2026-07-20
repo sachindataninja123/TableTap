@@ -74,9 +74,7 @@ export const loginUser = async (req, res) => {
       .json(
         new ApiResponse(
           200,
-          {
             safeUser,
-          },
           "user login successfully",
         ),
       );

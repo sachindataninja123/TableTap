@@ -15,6 +15,10 @@ const userSchema = new Schema(
       lowercase: true,
       trim: true,
     },
+    avatar: {
+      url: { type: String, default: "" },
+      public_id: { type: String, default: "" },
+    },
     password: {
       type: String,
       required: true,
