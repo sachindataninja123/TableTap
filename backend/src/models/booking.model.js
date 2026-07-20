@@ -17,12 +17,12 @@ const bookingSchema = new Schema(
       index: true,
     },
 
-    date: {
+    bookingDate: {
       type: Date,
       required: true,
     },
 
-    time: {
+    bookingTime: {
       type: String,
       required: true,
       trim: true,
@@ -81,7 +81,6 @@ const bookingSchema = new Schema(
     bookingId: {
       type: String,
       unique: true,
-      required: true,
       index: true,
     },
 
@@ -96,16 +95,17 @@ const bookingSchema = new Schema(
   },
   {
     timestamps: true,
-  },
+  }
 );
 
-bookingSchema.pre("save", function () {
+bookingSchema.pre("validate", function (next) {
   if (!this.bookingId) {
-    this.bookingId`AS-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
+    this.bookingId = `AS-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
   }
+  next();
 });
 
-// Helpful indexes
+// Helpful indexes — now match the actual field names above
 bookingSchema.index({ bookingDate: 1, bookingTime: 1 });
 bookingSchema.index({ restaurant: 1, bookingDate: 1 });
 
