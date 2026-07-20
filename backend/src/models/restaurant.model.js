@@ -27,7 +27,6 @@ const restaurantSchema = new Schema(
       type: String,
       required: true,
       trim: true,
-      index: true,
     },
 
     priceRange: {
@@ -52,7 +51,6 @@ const restaurantSchema = new Schema(
       type: String,
       required: true,
       trim: true,
-      index: true,
     },
 
     address: {
