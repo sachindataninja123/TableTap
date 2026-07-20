@@ -17,12 +17,12 @@ const bookingSchema = new Schema(
       index: true,
     },
 
-    bookingDate: {
+    date: {
       type: Date,
       required: true,
     },
 
-    bookingTime: {
+    time: {
       type: String,
       required: true,
       trim: true,
@@ -35,7 +35,7 @@ const bookingSchema = new Schema(
       max: 20,
     },
 
-    occassion: {
+    occasion: {
       type: String,
       trim: true,
     },
@@ -53,7 +53,7 @@ const bookingSchema = new Schema(
       default: "pending",
     },
 
-    specialRequest: {
+    specialRequests: {
       type: String,
       trim: true,
       default: "",

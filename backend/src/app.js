@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 dotenv.config();
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import userRouter from "./routes/user.routes.js";
+import userRouter from "./routes/auth.routes.js";
 import restaurantRouter from "./routes/restaurant.routes.js";
 
 const app = express();
@@ -18,5 +18,6 @@ app.get("/", (req, res) => {
 
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/restaurants", restaurantRouter);
+
 
 export default app;
