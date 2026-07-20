@@ -1,129 +1,167 @@
 import User from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
+import {
+  deleteFromCloudinary,
+  uploadOnCloudinary,
+} from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import { generateToken } from "../utils/generateToken.js";
+import fs from "fs";
 
-export const registerUser = async (req, res) => {
+export const updateProfile = async (req, res) => {
   try {
-    const { name, email, password, phone, role } = req.body;
+    const { name, phone } = req.body;
 
-    if (!name || !email || !password || !phone) {
-      throw new ApiError(400, "Pleae enter all required fields!");
+    if (!name && !phone) {
+      throw new ApiError(400, "Please provide at least one field to update");
     }
 
-    const isUser = await User.findOne({ email });
-    if (isUser) {
-      throw new ApiError(404, "User already exists!");
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      {
+        $set: {
+          name,
+          phone,
+        },
+      },
+      { new: true, runValidators: true },
+    ).select("-password");
+
+    if (!user) {
+      throw new ApiError(404, "User not found");
     }
-
-    const user = await User.create({
-      name,
-      email,
-      password,
-      phone,
-      role,
-    });
-
-    const safeUser = await User.findById(user._id).select("-password");
 
     return res
       .status(200)
-      .json(new ApiResponse(201, safeUser, "User registered successfully!"));
+      .json(new ApiResponse(200, user, "Profile updated successfully"));
   } catch (error) {
-    console.error("register Controller Error:", error);
+    console.error("updateProfile Controller Error:", error);
 
-    return res.status(500).json({
+    return res.status(error.statusCode || 500).json({
       success: false,
       message: error.message || "Internal Server Error",
     });
   }
 };
 
-export const loginUser = async (req, res) => {
+export const changePassword = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { oldPass, newPass } = req.body;
 
-    if (!email || !password) {
-      throw new ApiError(400, "Pleae enter all required fields!");
+    if (!oldPass || !newPass) {
+      throw new ApiError(400, "Please provide old and new password");
     }
 
-    const user = await User.findOne({ email });
+    if (newPass < 6) {
+      throw new ApiError(400, "New password must be at least 6 characters");
+    }
+
+    const user = await User.findById(req.user._id);
+
     if (!user) {
-      throw new ApiError(400, "User does'nt exist!");
+      throw new ApiError(404, "User not found");
     }
 
-    const isValidUser = await user.comparePassword(password);
-    if (!isValidUser) {
-      throw new ApiError(400, "Invalid credientials!");
+    const isMatch = await user.comparePassword(oldPass);
+    if (!isMatch) {
+      throw new ApiError(400, "Old password is incorrect");
     }
 
-    const token = await generateToken(user);
+    user.password = newPass;
+    user.save();
 
-    const safeUser = await User.findById(user._id).select("-password");
+    return res
+      .status(200)
+      .json(new ApiResponse(200, null, "Password changed successfully"));
+  } catch (error) {
+    console.error("changePassword Controller Error:", error);
 
-    const cookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // true in production
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+export const updateProfileImage = async (req, res) => {
+  try {
+    // console.log("req.file:", req.file);
+
+    if (!req.file) {
+      throw new ApiError(400, "Please upload an image");
+    }
+
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      fs.unlinkSync(req.file.path);
+      throw new ApiError(404, "User not found");
+    }
+
+    if (user?.avatar?.public_id) {
+      await deleteFromCloudinary(user.avatar.public_id);
+    }
+
+    const uploaded = await uploadOnCloudinary(req.file.path);
+
+    if (!uploaded) {
+      throw new ApiError(500, "Failed to upload image");
+    }
+
+    user.avatar = {
+      url: uploaded.secure_url,
+      public_id: uploaded.public_id,
     };
 
+    await user.save();
+
+    const safeUser = await User.findById(user._id).select("-password");
+
     return res
       .status(200)
-      .cookie("token", token, cookieOptions)
       .json(
-        new ApiResponse(
-          200,
-          {
-            safeUser,
-          },
-          "user login successfully",
-        ),
+        new ApiResponse(200, safeUser, "Profile image updated successfully"),
       );
   } catch (error) {
-    console.error("login Controller Error:", error);
+    console.error("updateProfileImage Controller Error:", error);
 
-    return res.status(500).json({
+    // ensure temp file is removed even on failure
+    if (req.file?.path && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    return res.status(error.statusCode || 500).json({
       success: false,
       message: error.message || "Internal Server Error",
     });
   }
 };
 
-export const getMe = async (req, res) => {
+export const deleteAccount = async (req, res) => {
   try {
-    if (!req.user) {
-      throw new ApiError(401, "Not authorized");
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      throw new ApiError(404, "User not found");
     }
+
+    if (user?.avatar?.public_id) {
+      await deleteFromCloudinary(user.avatar.public_id);
+    }
+
+    await User.findByIdAndDelete(req.user._id);
 
     return res
       .status(200)
-      .json(new ApiResponse(200, req.user, "User fetched successfully!"));
-  } catch (error) {
-    console.error("getMe Controller Error:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: error.message || "Internal Server Error",
-    });
-  }
-};
-
-export const logOutUser = async (req, res) => {
-  try {
-    return res
       .clearCookie("token", {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "strict",
       })
-      .status(200)
-      .json(new ApiResponse(200, null, "User logged out successfully"));
-      
+      .json(new ApiResponse(200, null, "Account deleted successfully"));
   } catch (error) {
-    console.error("logout Controller Error:", error);
+    console.error("deleteAccount Controller Error:", error);
 
-    return res.status(500).json({
+    return res.status(error.statusCode || 500).json({
       success: false,
       message: error.message || "Internal Server Error",
     });

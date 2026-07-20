@@ -1,6 +1,6 @@
 import { ApiError } from "../utils/ApiError.js";
-import jwt from "jsonwebtoken"
-import User from "../models/user.model.js"
+import jwt from "jsonwebtoken";
+import User from "../models/user.model.js";
 
 export const isAuth = async (req, res, next) => {
   try {
@@ -24,25 +24,31 @@ export const isAuth = async (req, res, next) => {
   } catch (error) {
     console.error("isAuth Middleware Error:", error);
 
-    return res.status(401).json({
+    return res.status(error.statusCode || 401).json({
       success: false,
-      message: error.message,
+      message: error.message || "Not authorized",
     });
   }
 };
 
 export const adminOnly = (req, res, next) => {
   if (req.user && req.user.role === "admin") {
-    next();
-  } else {
-    throw new ApiError(403, "Access Denied, admin role only!");
+    return next();
   }
+
+  return res.status(403).json({
+    success: false,
+    message: "Access Denied, admin role only!",
+  });
 };
 
 export const ownerOnly = (req, res, next) => {
-  if ((req.user && req.user.role === "admin") || req.user.role === "owner") {
-    next();
-  } else {
-    throw new ApiError(403, "Access Denied, admin or owner role only!");
+  if (req.user && (req.user.role === "admin" || req.user.role === "owner")) {
+    return next();
   }
+
+  return res.status(403).json({
+    success: false,
+    message: "Access Denied, admin or owner role only!",
+  });
 };

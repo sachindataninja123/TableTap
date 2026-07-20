@@ -3,8 +3,9 @@ import dotenv from "dotenv";
 dotenv.config();
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import userRouter from "./routes/user.routes.js";
+import authRouter from "./routes/auth.routes.js";
 import restaurantRouter from "./routes/restaurant.routes.js";
+import userRouter from "./routes/user.routes.js";
 
 const app = express();
 
@@ -16,6 +17,7 @@ app.get("/", (req, res) => {
   res.send("Server is live!");
 });
 
+app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/restaurants", restaurantRouter);
 
