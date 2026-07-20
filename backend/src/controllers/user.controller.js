@@ -61,16 +61,25 @@ export const loginUser = async (req, res) => {
 
     const safeUser = await User.findById(user._id).select("-password");
 
-    return res.status(200).json(
-      new ApiResponse(
-        200,
-        {
-          safeUser,
-          token,
-        },
-        "user login successfully",
-      ),
-    );
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production", // true in production
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    };
+
+    return res
+      .status(200)
+      .cookie("token", token, cookieOptions)
+      .json(
+        new ApiResponse(
+          200,
+          {
+            safeUser,
+          },
+          "user login successfully",
+        ),
+      );
   } catch (error) {
     console.error("login Controller Error:", error);
 
@@ -90,9 +99,29 @@ export const getMe = async (req, res) => {
     return res
       .status(200)
       .json(new ApiResponse(200, req.user, "User fetched successfully!"));
-      
   } catch (error) {
     console.error("getMe Controller Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+export const logOutUser = async (req, res) => {
+  try {
+    return res
+      .clearCookie("token", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+      })
+      .status(200)
+      .json(new ApiResponse(200, null, "User logged out successfully"));
+      
+  } catch (error) {
+    console.error("logout Controller Error:", error);
 
     return res.status(500).json({
       success: false,
