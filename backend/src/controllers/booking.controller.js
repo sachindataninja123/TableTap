@@ -2,6 +2,7 @@ import Booking from "../models/booking.model.js";
 import Restaurant from "../models/restaurant.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { expireStaleBookings } from "../utils/expireStaleBookings.js";
 
 // Shared helper: checks if a restaurant has enough free seats
 // for a given date/time/guest count. Reused by createBooking.
@@ -11,6 +12,8 @@ const checkSlotAvailability = async (
   bookingTime,
   guests,
 ) => {
+  await expireStaleBookings({ restaurant: restaurantId });
+
   const restaurant = await Restaurant.findById(restaurantId);
 
   if (!restaurant) {
@@ -35,11 +38,17 @@ const checkSlotAvailability = async (
     restaurant: restaurantId,
     bookingDate: { $gte: startDate, $lte: endDate },
     bookingTime,
-    status: "confirmed",
+    status: { $in: ["pending", "confirmed"] },
   });
 
   const bookedSeats = existingBookings.reduce((sum, b) => sum + b.guests, 0);
   const availableSeats = restaurant.totalSeats - bookedSeats;
+
+  console.log("Restaurant totalSeats:", restaurant.totalSeats);
+  console.log("Guests requested:", guests);
+  console.log("Already booked:", bookedSeats);
+  console.log("Available seats:", availableSeats);
+  console.log("Guests type:", typeof guests);
 
   if (guests > availableSeats) {
     throw new ApiError(
@@ -101,6 +110,7 @@ export const createBooking = async (req, res) => {
       contactName,
       contactPhone,
       contactEmail,
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 min
     });
 
     return res
@@ -300,16 +310,138 @@ export const getRestaurantBookings = async (req, res) => {
   }
 };
 
-// @desc    Update booking status (owner accepts/rejects/completes)
+// @desc    Owner approves a pending booking request
+// @route   PATCH /api/bookings/:id/approve
+export const approveBooking = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await expireStaleBookings({ restaurant: id });
+
+    const booking = await Booking.findById(id).populate(
+      "restaurant",
+      "owner totalSeats",
+    );
+
+    if (!booking) {
+      throw new ApiError(404, "Booking not found");
+    }
+
+    const isOwner =
+      booking.restaurant.owner.toString() === req.user._id.toString();
+    if (!isOwner && req.user.role !== "admin") {
+      throw new ApiError(403, "Access denied");
+    }
+
+    if (booking.status !== "pending") {
+      throw new ApiError(
+        400,
+        `Cannot approve a booking with status "${booking.status}"`,
+      );
+    }
+
+    // Re-validate seats are still available at approval time —
+    // protects against the case where OTHER pending requests for the
+    // same slot got approved first and seats are now gone
+    const startDate = new Date(booking.bookingDate);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(booking.bookingDate);
+    endDate.setHours(23, 59, 59, 999);
+
+    const confirmedBookings = await Booking.find({
+      _id: { $ne: booking._id },
+      restaurant: booking.restaurant._id,
+      bookingDate: { $gte: startDate, $lte: endDate },
+      bookingTime: booking.bookingTime,
+      status: "confirmed",
+    });
+
+    const bookedSeats = confirmedBookings.reduce((sum, b) => sum + b.guests, 0);
+    const availableSeats = booking.restaurant.totalSeats - bookedSeats;
+
+    if (booking.guests > availableSeats) {
+      throw new ApiError(
+        400,
+        `Cannot approve — only ${Math.max(availableSeats, 0)} seat(s) left for this slot`,
+      );
+    }
+
+    booking.status = "confirmed";
+    await booking.save();
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, booking, "Booking approved successfully"));
+  } catch (error) {
+    console.error("approveBooking Controller Error:", error);
+
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+// @desc    Owner rejects a pending booking request
+// @route   PATCH /api/bookings/:id/reject
+export const rejectBooking = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rejectionReason } = req.body;
+
+    const booking = await Booking.findById(id).populate("restaurant", "owner");
+
+    if (!booking) {
+      throw new ApiError(404, "Booking not found");
+    }
+
+    const isOwner =
+      booking.restaurant.owner.toString() === req.user._id.toString();
+    if (!isOwner && req.user.role !== "admin") {
+      throw new ApiError(403, "Access denied");
+    }
+
+    if (booking.status !== "pending") {
+      throw new ApiError(
+        400,
+        `Cannot reject a booking with status "${booking.status}"`,
+      );
+    }
+
+    booking.status = "cancelled";
+    booking.cancelledAt = new Date();
+    booking.cancellationReason = rejectionReason || "Rejected by restaurant";
+
+    await booking.save();
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, booking, "Booking rejected"));
+  } catch (error) {
+    console.error("rejectBooking Controller Error:", error);
+
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+// @desc    Update booking status — for marking completed only
 // @route   PATCH /api/bookings/:id/status
 export const updateBookingStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
 
-    const allowedStatuses = ["confirmed", "completed", "cancelled"];
+    // "confirmed" intentionally excluded — must go through approveBooking
+    // so the seat-availability re-check always runs
+    const allowedStatuses = ["completed", "cancelled"];
     if (!status || !allowedStatuses.includes(status)) {
-      throw new ApiError(400, "Please provide a valid status");
+      throw new ApiError(
+        400,
+        `Please provide a valid status. To confirm a pending booking, use the approve endpoint instead.`,
+      );
     }
 
     const booking = await Booking.findById(id).populate("restaurant", "owner");
@@ -322,6 +454,22 @@ export const updateBookingStatus = async (req, res) => {
       booking.restaurant.owner.toString() === req.user._id.toString();
     if (!isOwner && req.user.role !== "admin") {
       throw new ApiError(403, "Access denied");
+    }
+
+    // Only a confirmed booking can be marked completed —
+    // doesn't make sense to "complete" something still pending
+    if (status === "completed" && booking.status !== "confirmed") {
+      throw new ApiError(
+        400,
+        "Only confirmed bookings can be marked as completed",
+      );
+    }
+
+    if (booking.status === "cancelled" || booking.status === "completed") {
+      throw new ApiError(
+        400,
+        `Booking is already ${booking.status}, cannot update further`,
+      );
     }
 
     booking.status = status;

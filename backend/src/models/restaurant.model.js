@@ -165,7 +165,7 @@ const restaurantSchema = new Schema(
       default: "pending",
       index: true,
     },
-    
+
     rejectionReason: {
       type: String,
       default: "",

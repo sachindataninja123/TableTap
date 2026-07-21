@@ -42,8 +42,8 @@ const bookingSchema = new Schema(
 
     status: {
       type: String,
-      enum: ["confirmed", "completed", "cancelled"],
-      default: "confirmed",
+      enum: ["pending", "confirmed", "completed", "cancelled"],
+      default: "pending",
       index: true,
     },
 
@@ -87,6 +87,10 @@ const bookingSchema = new Schema(
     cancelledAt: {
       type: Date,
     },
+    
+    expiresAt: {
+      type: Date,
+    },
 
     cancellationReason: {
       type: String,
@@ -95,14 +99,13 @@ const bookingSchema = new Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 bookingSchema.pre("validate", function (next) {
   if (!this.bookingId) {
     this.bookingId = `AS-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
   }
-  next();
 });
 
 // Helpful indexes — now match the actual field names above
