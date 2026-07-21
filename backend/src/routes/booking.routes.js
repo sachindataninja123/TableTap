@@ -26,7 +26,7 @@ bookingRouter.get(
 );
 bookingRouter.patch("/:id/status", isAuth, ownerOnly, updateBookingStatus);
 
-// Shared — permission check happens inside the controller
+// Shared 
 bookingRouter.get("/:id", isAuth, getBookingsById);
 
 export default bookingRouter;

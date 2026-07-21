@@ -32,8 +32,6 @@ const generateUniqueSlug = async (name) => {
   return slug;
 };
 
-
-
 // ========== PUBLIC/CUSTOMER CONTROLLERS ===========
 
 // @desc    Get restaurant
@@ -718,6 +716,93 @@ export const getAllRestaurantsAdmin = async (req, res) => {
     );
   } catch (error) {
     console.error("getAllRestaurantsAdmin Controller Error:", error);
+
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+// @desc    Toggle featured status of a restaurant (admin)
+// @route   PATCH /api/restaurants/:id/featured
+export const toggleFeaturedStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { featured } = req.body;
+
+    if (typeof featured !== "boolean") {
+      throw new ApiError(400, "featured must be true or false");
+    }
+
+    const restaurant = await Restaurant.findById(id);
+
+    if (!restaurant) {
+      throw new ApiError(404, "Restaurant not found!");
+    }
+
+    // Only approved restaurants should be featurable —
+    if (restaurant.status !== "approved") {
+      throw new ApiError(400, "Only approved restaurants can be featured");
+    }
+
+    restaurant.featured = featured;
+    await restaurant.save();
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          restaurant,
+          `Restaurant ${featured ? "marked as" : "removed from"} featured`
+        )
+      );
+  } catch (error) {
+    console.error("toggleFeaturedStatus Controller Error:", error);
+
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+// @desc    Toggle exclusive status of a restaurant (admin)
+// @route   PATCH /api/restaurants/:id/exclusive
+export const toggleExclusiveStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { exclusive } = req.body;
+
+    if (typeof exclusive !== "boolean") {
+      throw new ApiError(400, "exclusive must be true or false");
+    }
+
+    const restaurant = await Restaurant.findById(id);
+
+    if (!restaurant) {
+      throw new ApiError(404, "Restaurant not found!");
+    }
+
+    if (restaurant.status !== "approved") {
+      throw new ApiError(400, "Only approved restaurants can be marked exclusive");
+    }
+
+    restaurant.exclusive = exclusive;
+    await restaurant.save();
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          restaurant,
+          `Restaurant ${exclusive ? "marked as" : "removed from"} exclusive`
+        )
+      );
+  } catch (error) {
+    console.error("toggleExclusiveStatus Controller Error:", error);
 
     return res.status(error.statusCode || 500).json({
       success: false,

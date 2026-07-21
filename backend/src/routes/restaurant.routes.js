@@ -21,6 +21,8 @@ import {
   approveRestaurant,
   rejectRestaurant,
   getAllRestaurantsAdmin,
+  toggleFeaturedStatus,
+  toggleExclusiveStatus,
 } from "../controllers/restaurant.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 
@@ -48,6 +50,18 @@ restaurantRouter.patch("/:id/hours", isAuth, ownerOnly, setOpeningHours);
 restaurantRouter.get("/admin/all", isAuth, adminOnly, getAllRestaurantsAdmin);
 restaurantRouter.patch("/:id/approve", isAuth, adminOnly, approveRestaurant);
 restaurantRouter.patch("/:id/reject", isAuth, adminOnly, rejectRestaurant);
+restaurantRouter.patch(
+  "/:id/featured",
+  isAuth,
+  adminOnly,
+  toggleFeaturedStatus,
+);
+restaurantRouter.patch(
+  "/:id/exclusive",
+  isAuth,
+  adminOnly,
+  toggleExclusiveStatus,
+);
 
 // ========== PUBLIC ROUTES (dynamic, must come LAST) ==========
 restaurantRouter.get("/:slug", getRestaurantBySlug);
