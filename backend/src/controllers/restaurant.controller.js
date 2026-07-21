@@ -4,7 +4,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import Booking from "../models/booking.model.js";
 import crypto from "crypto";
-import fs from "fs"
+import fs from "fs";
 import {
   deleteFromCloudinary,
   uploadOnCloudinary,
@@ -32,8 +32,12 @@ const generateUniqueSlug = async (name) => {
   return slug;
 };
 
-// public/customer side controllers
 
+
+// ========== PUBLIC/CUSTOMER CONTROLLERS ===========
+
+// @desc    Get restaurant
+// @route   GET /api/restaurants/
 export const getRestaurants = async (req, res) => {
   try {
     const {
@@ -144,6 +148,8 @@ export const getRestaurants = async (req, res) => {
   }
 };
 
+// @desc    Get featured restaurant
+// @route   GET /api/restaurants/featured
 export const getFeaturedRestaurants = async (req, res) => {
   try {
     const featured = await Restaurant.find({
@@ -170,6 +176,8 @@ export const getFeaturedRestaurants = async (req, res) => {
   }
 };
 
+// @desc    Get restaurant by slug
+// @route   GET /api/restaurants/:slug
 export const getRestaurantBySlug = async (req, res) => {
   try {
     const { slug } = req.params;
@@ -207,6 +215,8 @@ export const getRestaurantBySlug = async (req, res) => {
   }
 };
 
+// @desc    Get restaurant availability
+// @route   GET /api/restaurants/:id/availability
 export const getRestaurantAvailability = async (req, res) => {
   try {
     const { id } = req.params;
@@ -280,9 +290,11 @@ export const getRestaurantAvailability = async (req, res) => {
   }
 };
 
-//owner side controllers
 
-// @desc    create restaurant
+
+// ========== OWNER CONTROLLERS ===========
+
+// @desc    Create restaurant
 // @route   POST /api/restaurants/create
 export const createRestaurant = async (req, res) => {
   try {
@@ -313,7 +325,7 @@ export const createRestaurant = async (req, res) => {
       throw new ApiError(400, "All fields are required!");
     }
 
-    const slugName = generateUniqueSlug(name);
+    const slugName = await generateUniqueSlug(name);
 
     const restaurant = await Restaurant.create({
       owner: req.user._id,
@@ -355,7 +367,7 @@ export const updateRestaurant = async (req, res) => {
 
     const restaurant = await Restaurant.findById(id);
     if (!restaurant) {
-      throw new ApiError(403, "Restaurant not found!");
+      throw new ApiError(404, "Restaurant not found!");
     }
 
     const isOwner = restaurant.owner.toString() === req.user._id.toString();
@@ -388,7 +400,7 @@ export const updateRestaurant = async (req, res) => {
       throw new ApiError(400, "Please provide at least one field to update");
     }
 
-    const updateRestaurant = await Restaurant.findByIdAndUpdate(
+    const updatedRestaurant = await Restaurant.findByIdAndUpdate(
       id,
       {
         $set: updates,
@@ -454,7 +466,7 @@ export const deleteRestaurant = async (req, res) => {
 
     return res
       .status(200)
-      .json(new ApiResponse(200, null, "Restaurant added successfully"));
+      .json(new ApiResponse(200, null, "Restaurant deleted successfully"));
   } catch (error) {
     console.error("deleteRestaurant Controller Error:", error);
 
@@ -519,6 +531,193 @@ export const uploadRestaurantImage = async (req, res) => {
     if (req.file?.path && fs.existsSync(req.file.path)) {
       fs.unlinkSync(req.file.path);
     }
+
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+// @desc    Set opening hours & available slots (owner)
+// @route   PATCH /api/restaurants/:id/hours
+export const setOpeningHours = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { openingTime, closingTime, availableSlots } = req.body;
+
+    if (!openingTime || !closingTime || !Array.isArray(availableSlots)) {
+      throw new ApiError(
+        400,
+        "Please provide openingTime, closingTime, and availableSlots array",
+      );
+    }
+
+    const restaurant = await Restaurant.findById(id);
+
+    if (!restaurant) {
+      throw new ApiError(404, "Restaurant not found!");
+    }
+
+    const isOwner = restaurant.owner.toString() === req.user._id.toString();
+    if (!isOwner && req.user.role !== "admin") {
+      throw new ApiError(403, "Access denied!");
+    }
+
+    restaurant.openingTime = openingTime;
+    restaurant.closingTime = closingTime;
+    restaurant.availableSlots = availableSlots;
+
+    await restaurant.save();
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, restaurant, "Opening hours updated successfully"),
+      );
+  } catch (error) {
+    console.error("setOpeningHours Controller Error:", error);
+
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+// @desc    Get logged-in owner's restaurant(s)
+// @route   GET /api/restaurants/my-restaurants
+export const getMyRestaurants = async (req, res) => {
+  try {
+    //owner needs to see pending/rejected too.
+    const restaurants = await Restaurant.find({ owner: req.user._id }).sort({
+      createdAt: -1,
+    });
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          restaurants,
+          "Your restaurants fetched successfully",
+        ),
+      );
+  } catch (error) {
+    console.error("getMyRestaurants Controller Error:", error);
+
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+
+
+// ========== ADMIN CONTROLLERS ===========
+
+// @desc    Approve a pending restaurant (admin)
+// @route   PATCH /api/restaurants/:id/approve
+export const approveRestaurant = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const restaurant = await Restaurant.findById(id);
+
+    if (!restaurant) {
+      throw new ApiError(404, "Restaurant not found!");
+    }
+
+    if (restaurant.status === "approved") {
+      throw new ApiError(400, "Restaurant is already approved");
+    }
+
+    restaurant.status = "approved";
+    await restaurant.save();
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, restaurant, "Restaurant approved successfully"),
+      );
+  } catch (error) {
+    console.error("approveRestaurant Controller Error:", error);
+
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+// @desc    Reject a pending restaurant (admin)
+// @route   PATCH /api/restaurants/:id/reject
+export const rejectRestaurant = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rejectionReason } = req.body;
+
+    const restaurant = await Restaurant.findById(id);
+    if (!restaurant) {
+      throw new ApiError(404, "Restaurant not found!");
+    }
+
+    restaurant.status = "rejected";
+    if (rejectionReason) {
+      restaurant.rejectionReason = rejectionReason; // requires schema field, see note below
+    }
+
+    await restaurant.save();
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, restaurant, "Restaurant rejected successfully"),
+      );
+  } catch (error) {
+    console.error("rejectRestaurant Controller Error:", error);
+
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+// @desc    Get all restaurants regardless of status (admin moderation view)
+// @route   GET /api/restaurants/admin/all
+export const getAllRestaurantsAdmin = async (req, res) => {
+  try {
+    const { status, page = 1, limit = 10 } = req.query;
+
+    const filter = {};
+    if (status) filter.status = status; // no forced "approved" filter here
+
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const restaurants = await Restaurant.find(filter)
+      .populate("owner", "name email phone")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit));
+
+    const total = await Restaurant.countDocuments(filter);
+
+    return res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          restaurants,
+          currentPage: Number(page),
+          totalPages: Math.ceil(total / limit),
+          totalRestaurants: total,
+        },
+        "Restaurants fetched successfully",
+      ),
+    );
+  } catch (error) {
+    console.error("getAllRestaurantsAdmin Controller Error:", error);
 
     return res.status(error.statusCode || 500).json({
       success: false,
