@@ -8,12 +8,14 @@ import {
   getRestaurantBookings,
   updateBookingStatus,
   getBookingsById,
+  approveBooking,
+  rejectBooking,
 } from "../controllers/booking.controller.js";
 
 const bookingRouter = express.Router();
 
 // Customer routes
-bookingRouter.post("/", isAuth, createBooking);
+bookingRouter.post("/create", isAuth, createBooking);
 bookingRouter.get("/my-bookings", isAuth, getMyBookings);
 bookingRouter.patch("/:id/cancel", isAuth, cancelBooking);
 
@@ -24,9 +26,11 @@ bookingRouter.get(
   ownerOnly,
   getRestaurantBookings,
 );
+bookingRouter.patch("/:id/approve", isAuth, ownerOnly, approveBooking);
+bookingRouter.patch("/:id/reject", isAuth, ownerOnly, rejectBooking);
 bookingRouter.patch("/:id/status", isAuth, ownerOnly, updateBookingStatus);
 
-// Shared 
+// Shared
 bookingRouter.get("/:id", isAuth, getBookingsById);
 
 export default bookingRouter;

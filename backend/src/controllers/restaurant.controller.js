@@ -9,6 +9,7 @@ import {
   deleteFromCloudinary,
   uploadOnCloudinary,
 } from "../utils/cloudinary.js";
+import { expireStaleBookings } from "../utils/expireStaleBookings.js";
 
 const generateUniqueSlug = async (name) => {
   // Base slug
@@ -220,6 +221,8 @@ export const getRestaurantAvailability = async (req, res) => {
     const { id } = req.params;
     const { date } = req.query;
 
+    await expireStaleBookings({ restaurant: id });
+
     if (!date) {
       throw new ApiError(400, "Please provide a booking date!");
     }
@@ -243,7 +246,7 @@ export const getRestaurantAvailability = async (req, res) => {
         $gte: startDate,
         $lte: endDate,
       },
-      status: "confirmed",
+      status: { $in: ["pending", "confirmed"] },
     });
 
     const availability = restaurant.availableSlots.map((slot) => {
@@ -287,8 +290,6 @@ export const getRestaurantAvailability = async (req, res) => {
     });
   }
 };
-
-
 
 // ========== OWNER CONTROLLERS ===========
 
@@ -611,8 +612,6 @@ export const getMyRestaurants = async (req, res) => {
   }
 };
 
-
-
 // ========== ADMIN CONTROLLERS ===========
 
 // @desc    Approve a pending restaurant (admin)
@@ -755,8 +754,8 @@ export const toggleFeaturedStatus = async (req, res) => {
         new ApiResponse(
           200,
           restaurant,
-          `Restaurant ${featured ? "marked as" : "removed from"} featured`
-        )
+          `Restaurant ${featured ? "marked as" : "removed from"} featured`,
+        ),
       );
   } catch (error) {
     console.error("toggleFeaturedStatus Controller Error:", error);
@@ -786,7 +785,10 @@ export const toggleExclusiveStatus = async (req, res) => {
     }
 
     if (restaurant.status !== "approved") {
-      throw new ApiError(400, "Only approved restaurants can be marked exclusive");
+      throw new ApiError(
+        400,
+        "Only approved restaurants can be marked exclusive",
+      );
     }
 
     restaurant.exclusive = exclusive;
@@ -798,8 +800,8 @@ export const toggleExclusiveStatus = async (req, res) => {
         new ApiResponse(
           200,
           restaurant,
-          `Restaurant ${exclusive ? "marked as" : "removed from"} exclusive`
-        )
+          `Restaurant ${exclusive ? "marked as" : "removed from"} exclusive`,
+        ),
       );
   } catch (error) {
     console.error("toggleExclusiveStatus Controller Error:", error);
