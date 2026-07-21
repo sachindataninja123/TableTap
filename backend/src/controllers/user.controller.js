@@ -7,6 +7,8 @@ import {
 import { ApiResponse } from "../utils/ApiResponse.js";
 import fs from "fs";
 
+// @desc    Update a user profile
+// @route   PATCH /api/users/update-profile
 export const updateProfile = async (req, res) => {
   try {
     const { name, phone } = req.body;
@@ -43,6 +45,8 @@ export const updateProfile = async (req, res) => {
   }
 };
 
+// @desc    Chnage Password of user
+// @route   PATCH /api/users/change-password
 export const changePassword = async (req, res) => {
   try {
     const { oldPass, newPass } = req.body;
@@ -82,6 +86,8 @@ export const changePassword = async (req, res) => {
   }
 };
 
+// @desc    Update-image a user profile
+// @route   PATCH /api/users/update-avatar
 export const updateProfileImage = async (req, res) => {
   try {
     // console.log("req.file:", req.file);
@@ -136,6 +142,8 @@ export const updateProfileImage = async (req, res) => {
   }
 };
 
+// @desc    Delete a user profile
+// @route   Delete /api/users/delete-account
 export const deleteAccount = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);

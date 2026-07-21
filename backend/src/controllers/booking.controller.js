@@ -3,6 +3,8 @@ import Restaurant from "../models/restaurant.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 
+// Shared helper: checks if a restaurant has enough free seats
+// for a given date/time/guest count. Reused by createBooking.
 const checkSlotAvailability = async (
   restaurantId,
   bookingDate,
@@ -49,6 +51,8 @@ const checkSlotAvailability = async (
   return restaurant;
 };
 
+// @desc    Create a new booking
+// @route   POST /api/bookings
 export const createBooking = async (req, res) => {
   try {
     const {
@@ -112,6 +116,8 @@ export const createBooking = async (req, res) => {
   }
 };
 
+// @desc    Get logged-in user's bookings
+// @route   GET /api/bookings/my-bookings
 export const getMyBookings = async (req, res) => {
   try {
     const { status, page = 1, limit = 10 } = req.query;
@@ -151,6 +157,8 @@ export const getMyBookings = async (req, res) => {
   }
 };
 
+// @desc    Get a single booking by ID
+// @route   GET /api/bookings/:id
 export const getBookingsById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -186,6 +194,8 @@ export const getBookingsById = async (req, res) => {
   }
 };
 
+// @desc    Cancel a booking (customer)
+// @route   PATCH /api/bookings/:id/cancel
 export const cancelBooking = async (req, res) => {
   try {
     const { id } = req.params;
@@ -229,6 +239,8 @@ export const cancelBooking = async (req, res) => {
   }
 };
 
+// @desc    Get all bookings for restaurant(s) owned by logged-in owner
+// @route   GET /api/bookings/restaurant/:restaurantId
 export const getRestaurantBookings = async (req, res) => {
   try {
     const { restaurantId } = req.params;
@@ -288,6 +300,8 @@ export const getRestaurantBookings = async (req, res) => {
   }
 };
 
+// @desc    Update booking status (owner accepts/rejects/completes)
+// @route   PATCH /api/bookings/:id/status
 export const updateBookingStatus = async (req, res) => {
   try {
     const { id } = req.params;

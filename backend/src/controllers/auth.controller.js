@@ -3,6 +3,8 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { generateToken } from "../utils/generateToken.js";
 
+// @desc    Register a new user
+// @route   POST /api/auth/register
 export const registerUser = async (req, res) => {
   try {
     const { name, email, password, phone, role } = req.body;
@@ -39,6 +41,8 @@ export const registerUser = async (req, res) => {
   }
 };
 
+// @desc    Login a user
+// @route   POST /api/auth/login
 export const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -71,13 +75,7 @@ export const loginUser = async (req, res) => {
     return res
       .status(200)
       .cookie("token", token, cookieOptions)
-      .json(
-        new ApiResponse(
-          200,
-            safeUser,
-          "user login successfully",
-        ),
-      );
+      .json(new ApiResponse(200, safeUser, "user login successfully"));
   } catch (error) {
     console.error("login Controller Error:", error);
 
@@ -88,6 +86,8 @@ export const loginUser = async (req, res) => {
   }
 };
 
+// @desc    Get-me a user
+// @route   GET /api/auth/get-me
 export const getMe = async (req, res) => {
   try {
     if (!req.user) {
@@ -107,6 +107,8 @@ export const getMe = async (req, res) => {
   }
 };
 
+// @desc    logout a user
+// @route   POST /api/auth/logOut
 export const logOutUser = async (req, res) => {
   try {
     return res
@@ -117,7 +119,6 @@ export const logOutUser = async (req, res) => {
       })
       .status(200)
       .json(new ApiResponse(200, null, "User logged out successfully"));
-      
   } catch (error) {
     console.error("logout Controller Error:", error);
 
