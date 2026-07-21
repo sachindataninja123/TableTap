@@ -69,6 +69,7 @@ const restaurantSchema = new Schema(
       pincode: {
         type: String,
         required: true,
+        match: [/^\d{6}$/, "Pincode must be 6 digits"],
       },
       country: {
         type: String,
@@ -164,10 +165,16 @@ const restaurantSchema = new Schema(
       default: "pending",
       index: true,
     },
+    
+    rejectionReason: {
+      type: String,
+      default: "",
+      trim: true,
+    },
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 restaurantSchema.index({ cuisine: 1 });
