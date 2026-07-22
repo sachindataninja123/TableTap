@@ -154,7 +154,7 @@ export const toggleBanUser = async (req, res) => {
     }
 
     if (req.user._id.toString() === user._id.toString()) {
-      throw new ApiError("400", "You cannot ban your own account");
+      throw new ApiError(400, "You cannot ban your own account");
     }
 
     if (user.role === "admin") {
@@ -201,6 +201,10 @@ export const promoteToAdmin = async (req, res) => {
       throw new ApiError(400, "User is already an admin");
     }
 
+    if (user.isBanned) {
+      throw new ApiError(403, "Account has been banned. Cannot Promoted.");
+    }
+
     user.role = "admin";
     await user.save();
 
@@ -221,14 +225,71 @@ export const promoteToAdmin = async (req, res) => {
   }
 };
 
+// @desc    Demote an admin back to a regular role (admin only)
+// @route   PATCH /api/admin/users/:id/demote
+export const demoteAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { newRole } = req.body;
+
+    const allowedRoles = ["user", "owner"];
+    if (!newRole || !allowedRoles.includes(newRole)) {
+      throw new ApiError(400, "newRole must be 'user' or 'owner'");
+    }
+
+    const user = await User.findById(id);
+
+    if (!user) {
+      throw new ApiError(404, "User not found!");
+    }
+
+    if (user.role !== "admin") {
+      throw new ApiError(400, "User is not an admin");
+    }
+
+    if (user._id.toString() === req.user._id.toString()) {
+      throw new ApiError(400, "You cannot demote your own account");
+    }
+
+    // Prevent demoting the last remaining admin — platform would
+    const adminCount = await User.countDocuments({ role: "admin" });
+    if (adminCount <= 1) {
+      throw new ApiError(400, "Cannot demote the last remaining admin");
+    }
+
+    user.role = newRole;
+    await user.save();
+
+    const safeUser = await User.findById(user._id).select("-password");
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          safeUser,
+          `Admin demoted to ${newRole} successfully`,
+        ),
+      );
+  } catch (error) {
+    console.error("demoteAdmin Controller Error:", error);
+
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
 // @desc    Platform-wide statistics for admin dashboard
 // @route   GET /api/admin/stats
 export const getPlatformStats = async (req, res) => {
   try {
     const [
       totalUsers,
-      totalOwners,
       totalCustomers,
+      totalOwners,
+      totalAdmins,
       totalRestaurants,
       pendingRestaurants,
       approvedRestaurants,
@@ -240,8 +301,9 @@ export const getPlatformStats = async (req, res) => {
       cancelledBookings,
     ] = await Promise.all([
       User.countDocuments(),
-      User.countDocuments({ role: "owner" }),
       User.countDocuments({ role: "user" }),
+      User.countDocuments({ role: "owner" }),
+      User.countDocuments({ role: "admin" }),
       Restaurant.countDocuments(),
       Restaurant.countDocuments({ status: "pending" }),
       Restaurant.countDocuments({ status: "approved" }),
@@ -267,8 +329,9 @@ export const getPlatformStats = async (req, res) => {
         {
           users: {
             total: totalUsers,
-            owners: totalOwners,
             customers: totalCustomers,
+            owners: totalOwners,
+            admins: totalAdmins,
           },
           restaurants: {
             total: totalRestaurants,

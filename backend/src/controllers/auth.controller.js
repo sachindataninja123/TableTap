@@ -61,6 +61,10 @@ export const loginUser = async (req, res) => {
       throw new ApiError(400, "Invalid credientials!");
     }
 
+    if (user.isBanned) {
+      throw new ApiError(403, "Your account has been banned. Contact support.");
+    }
+
     const token = await generateToken(user);
 
     const safeUser = await User.findById(user._id).select("-password");
