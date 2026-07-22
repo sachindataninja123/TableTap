@@ -135,3 +135,165 @@ export const deleteUser = async (req, res) => {
     });
   }
 };
+
+// @desc    Ban / unban a user (admin) — soft alternative to deleting
+// @route   PATCH /api/admin/users/:id/ban
+export const toggleBanUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { banned } = req.body;
+
+    if (typeof banned !== "boolean") {
+      throw new ApiError(400, "Banned must be true or false");
+    }
+
+    const user = await User.findById(id);
+
+    if (!user) {
+      throw new ApiError(404, "User not found");
+    }
+
+    if (req.user._id.toString() === user._id.toString()) {
+      throw new ApiError("400", "You cannot ban your own account");
+    }
+
+    if (user.role === "admin") {
+      throw new ApiError(403, "Cannot ban another admin account");
+    }
+
+    user.isBanned = banned;
+    await user.save();
+
+    const safeUser = await User.findById(user._id).select("-password");
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          safeUser,
+          `User ${banned ? "banned" : "unbanned"} successfully`,
+        ),
+      );
+  } catch (error) {
+    console.error("toggleBanUser Controller Error:", error);
+
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+// @desc    Promote a user to admin
+// @route   PATCH /api/admin/users/:id/promote
+export const promoteToAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(id);
+
+    if (!user) {
+      throw new ApiError(404, "User not found!");
+    }
+
+    if (user.role === "admin") {
+      throw new ApiError(400, "User is already an admin");
+    }
+
+    user.role = "admin";
+    await user.save();
+
+    const safeUser = await User.findById(user._id).select("-password");
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, safeUser, "User promoted to admin successfully!"),
+      );
+  } catch (error) {
+    console.error("promoteToAdmin Controller Error:", error);
+
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+// @desc    Platform-wide statistics for admin dashboard
+// @route   GET /api/admin/stats
+export const getPlatformStats = async (req, res) => {
+  try {
+    const [
+      totalUsers,
+      totalOwners,
+      totalCustomers,
+      totalRestaurants,
+      pendingRestaurants,
+      approvedRestaurants,
+      rejectedRestaurants,
+      totalBookings,
+      pendingBookings,
+      confirmedBookings,
+      completedBookings,
+      cancelledBookings,
+    ] = await Promise.all([
+      User.countDocuments(),
+      User.countDocuments({ role: "owner" }),
+      User.countDocuments({ role: "user" }),
+      Restaurant.countDocuments(),
+      Restaurant.countDocuments({ status: "pending" }),
+      Restaurant.countDocuments({ status: "approved" }),
+      Restaurant.countDocuments({ status: "rejected" }),
+      Booking.countDocuments(),
+      Booking.countDocuments({ status: "pending" }),
+      Booking.countDocuments({ status: "confirmed" }),
+      Booking.countDocuments({ status: "completed" }),
+      Booking.countDocuments({ status: "cancelled" }),
+    ]);
+
+    // Bookings created in the last 7 days — simple growth signal
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const recentBookings = await Booking.countDocuments({
+      createdAt: { $gte: sevenDaysAgo },
+    });
+
+    return res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          users: {
+            total: totalUsers,
+            owners: totalOwners,
+            customers: totalCustomers,
+          },
+          restaurants: {
+            total: totalRestaurants,
+            pending: pendingRestaurants,
+            approved: approvedRestaurants,
+            rejected: rejectedRestaurants,
+          },
+          bookings: {
+            total: totalBookings,
+            pending: pendingBookings,
+            confirmed: confirmedBookings,
+            completed: completedBookings,
+            cancelled: cancelledBookings,
+            last7Days: recentBookings,
+          },
+        },
+        "Platform stats fetched successfully",
+      ),
+    );
+  } catch (error) {
+    console.error("getPlatformStats Controller Error:", error);
+
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "Internal Server Error",
+    });
+  }
+};

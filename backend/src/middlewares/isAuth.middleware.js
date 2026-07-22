@@ -19,6 +19,10 @@ export const isAuth = async (req, res, next) => {
       throw new ApiError(401, "User not found");
     }
 
+    if (user.isBanned) {
+      throw new ApiError(403, "Your account has been banned. Contact support.");
+    }
+
     req.user = user;
     next();
   } catch (error) {
