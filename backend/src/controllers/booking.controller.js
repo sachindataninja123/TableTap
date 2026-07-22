@@ -44,11 +44,11 @@ const checkSlotAvailability = async (
   const bookedSeats = existingBookings.reduce((sum, b) => sum + b.guests, 0);
   const availableSeats = restaurant.totalSeats - bookedSeats;
 
-  console.log("Restaurant totalSeats:", restaurant.totalSeats);
-  console.log("Guests requested:", guests);
-  console.log("Already booked:", bookedSeats);
-  console.log("Available seats:", availableSeats);
-  console.log("Guests type:", typeof guests);
+  // console.log("Restaurant totalSeats:", restaurant.totalSeats);
+  // console.log("Guests requested:", guests);
+  // console.log("Already booked:", bookedSeats);
+  // console.log("Available seats:", availableSeats);
+  // console.log("Guests type:", typeof guests);
 
   if (guests > availableSeats) {
     throw new ApiError(
