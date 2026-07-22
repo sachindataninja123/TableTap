@@ -10,31 +10,36 @@ export const registerUser = async (req, res) => {
     const { name, email, password, phone, role } = req.body;
 
     if (!name || !email || !password || !phone) {
-      throw new ApiError(400, "Pleae enter all required fields!");
+      throw new ApiError(400, "Please enter all required fields!");
     }
 
     const isUser = await User.findOne({ email });
     if (isUser) {
-      throw new ApiError(404, "User already exists!");
+      throw new ApiError(409, "User already exists!");
     }
+
+    // Only allow "user" or "owner" at signup — never let client
+    // self-assign "admin" through the public registration route
+    const allowedRoles = ["user", "owner"];
+    const safeRole = allowedRoles.includes(role) ? role : "user";
 
     const user = await User.create({
       name,
       email,
       password,
       phone,
-      role,
+      role: safeRole,
     });
 
     const safeUser = await User.findById(user._id).select("-password");
 
     return res
-      .status(200)
+      .status(201)
       .json(new ApiResponse(201, safeUser, "User registered successfully!"));
   } catch (error) {
     console.error("register Controller Error:", error);
 
-    return res.status(500).json({
+    return res.status(error.statusCode || 500).json({
       success: false,
       message: error.message || "Internal Server Error",
     });
