@@ -1,44 +1,15 @@
 // src/pages/customer/Home.jsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { HiOutlineLocationMarker, HiOutlineCalendar, HiOutlineUserGroup } from "react-icons/hi";
+import {
+  HiOutlineLocationMarker,
+  HiOutlineCalendar,
+  HiOutlineUserGroup,
+} from "react-icons/hi";
 import { FiStar } from "react-icons/fi";
-
-// TEMP mock data — swap for a real dispatch(getFeaturedRestaurants())
-// once restaurantSlice is wired up
-const mockFeatured = [
-  {
-    _id: "1",
-    slug: "the-copper-pot",
-    name: "The Copper Pot",
-    cuisine: "Modern European",
-    priceRange: "$$$",
-    rating: 4.7,
-    location: "Bandra, Mumbai",
-    image: { url: "" },
-  },
-  {
-    _id: "2",
-    slug: "sakura-house",
-    name: "Sakura House",
-    cuisine: "Japanese",
-    priceRange: "$$$$",
-    rating: 4.9,
-    location: "Indiranagar, Bengaluru",
-    image: { url: "" },
-  },
-  {
-    _id: "3",
-    slug: "amara",
-    name: "Amara",
-    cuisine: "Coastal Indian",
-    priceRange: "$$",
-    rating: 4.5,
-    location: "Koramangala, Bengaluru",
-    image: { url: "" },
-  },
-];
+import { useDispatch, useSelector } from "react-redux";
+import { fetchFeaturedRestaurants } from "../../features/restaurant/restaurantSlice";
 
 const steps = [
   {
@@ -66,6 +37,16 @@ const fadeUp = {
 const Home = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useState({ location: "", date: "", guests: "2" });
+  const dispatch = useDispatch();
+
+  const { featured, featuredLoading } = useSelector(
+    (state) => state.restaurant,
+  );
+
+  useEffect(() => {
+    dispatch(fetchFeaturedRestaurants());
+  }, [dispatch]);
+
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -117,9 +98,7 @@ const Home = () => {
             transition={{ duration: 0.6, delay: 0.15 }}
             className="bg-white border border-[#E7E2D6] rounded-2xl shadow-[0_20px_50px_-20px_rgba(22,40,31,0.25)] p-7"
           >
-            <p
-              className="text-[12px] uppercase tracking-[0.15em] text-[#B8863B] font-medium mb-1"
-            >
+            <p className="text-[12px] uppercase tracking-[0.15em] text-[#B8863B] font-medium mb-1">
               Find a table
             </p>
             <h2
@@ -136,7 +115,9 @@ const Home = () => {
                   type="text"
                   placeholder="City or neighborhood"
                   value={search.location}
-                  onChange={(e) => setSearch({ ...search, location: e.target.value })}
+                  onChange={(e) =>
+                    setSearch({ ...search, location: e.target.value })
+                  }
                   className="w-full text-[14px] text-[#16281F] placeholder:text-[#B0AA9C] focus:outline-none"
                 />
               </div>
@@ -147,7 +128,9 @@ const Home = () => {
                   <input
                     type="date"
                     value={search.date}
-                    onChange={(e) => setSearch({ ...search, date: e.target.value })}
+                    onChange={(e) =>
+                      setSearch({ ...search, date: e.target.value })
+                    }
                     className="w-full text-[13px] text-[#16281F] focus:outline-none bg-transparent"
                   />
                 </div>
@@ -155,7 +138,9 @@ const Home = () => {
                   <HiOutlineUserGroup className="text-[#B8863B] text-lg shrink-0" />
                   <select
                     value={search.guests}
-                    onChange={(e) => setSearch({ ...search, guests: e.target.value })}
+                    onChange={(e) =>
+                      setSearch({ ...search, guests: e.target.value })
+                    }
                     className="w-full text-[13px] text-[#16281F] focus:outline-none bg-transparent"
                   >
                     {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
@@ -203,7 +188,9 @@ const Home = () => {
                 >
                   {step.title}
                 </h3>
-                <p className="text-[14px] text-[#5C5C54] leading-relaxed">{step.desc}</p>
+                <p className="text-[14px] text-[#5C5C54] leading-relaxed">
+                  {step.desc}
+                </p>
               </motion.div>
             ))}
           </div>
@@ -232,58 +219,76 @@ const Home = () => {
           </Link>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {mockFeatured.map((restaurant, i) => (
-            <motion.div
-              key={restaurant._id}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-60px" }}
-              variants={fadeUp}
-              transition={{ duration: 0.5, delay: i * 0.08 }}
+        {/* Results */}
+        {featuredLoading ? (
+          <div className="text-center py-20 text-[#B0AA9C]">
+            Loading tables...
+          </div>
+        ) : featured?.length === 0 ? (
+          <div className="text-center py-20">
+            <p
+              className="text-[20px] text-[#16281F] mb-2"
+              style={{ fontFamily: "'Fraunces', serif" }}
             >
-              <Link
-                to={`/restaurants/${restaurant.slug}`}
-                className="group block bg-white border border-[#E7E2D6] rounded-xl overflow-hidden hover:shadow-[0_16px_40px_-20px_rgba(22,40,31,0.3)] transition-shadow"
+              No tables match that are featured..
+            </p>
+          </div>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {featured.map((restaurant, i) => (
+              <motion.div
+                key={restaurant._id}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: "-60px" }}
+                variants={fadeUp}
+                transition={{ duration: 0.5, delay: i * 0.08 }}
               >
-                <div className="aspect-4/3 bg-[#E7E2D6] relative overflow-hidden">
-                  {restaurant.image?.url ? (
-                    <img
-                      src={restaurant.image.url}
-                      alt={restaurant.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                  ) : (
-                    <div
-                      className="w-full h-full flex items-center justify-center text-[#B0AA9C] text-[13px]"
+                <Link
+                  to={`/restaurants/${restaurant.slug}`}
+                  className="group block bg-white border border-[#E7E2D6] rounded-xl overflow-hidden hover:shadow-[0_16px_40px_-20px_rgba(22,40,31,0.3)] transition-shadow"
+                >
+                  <div className="aspect-4/3 bg-[#E7E2D6] relative overflow-hidden">
+                    {restaurant.image?.url ? (
+                      <img
+                        src={restaurant.image.url}
+                        alt={restaurant.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div
+                        className="w-full h-full flex items-center justify-center text-[#B0AA9C] text-[13px]"
+                        style={{ fontFamily: "'Fraunces', serif" }}
+                      >
+                        {restaurant.name}
+                      </div>
+                    )}
+                    <div className="absolute top-3 right-3 bg-white/90 backdrop-blur px-2.5 py-1 rounded-full flex items-center gap-1">
+                      <FiStar className="text-[#B8863B] text-[12px] fill-[#B8863B]" />
+                      <span className="text-[12px] font-medium text-[#16281F]">
+                        {restaurant.rating}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="p-4">
+                    <h3
+                      className="text-[17px] text-[#16281F] mb-1"
                       style={{ fontFamily: "'Fraunces', serif" }}
                     >
                       {restaurant.name}
-                    </div>
-                  )}
-                  <div className="absolute top-3 right-3 bg-white/90 backdrop-blur px-2.5 py-1 rounded-full flex items-center gap-1">
-                    <FiStar className="text-[#B8863B] text-[12px] fill-[#B8863B]" />
-                    <span className="text-[12px] font-medium text-[#16281F]">
-                      {restaurant.rating}
-                    </span>
+                    </h3>
+                    <p className="text-[13px] text-[#5C5C54]">
+                      {restaurant.cuisine} · {restaurant.priceRange}
+                    </p>
+                    <p className="text-[13px] text-[#B0AA9C] mt-1">
+                      {restaurant.location}
+                    </p>
                   </div>
-                </div>
-                <div className="p-4">
-                  <h3
-                    className="text-[17px] text-[#16281F] mb-1"
-                    style={{ fontFamily: "'Fraunces', serif" }}
-                  >
-                    {restaurant.name}
-                  </h3>
-                  <p className="text-[13px] text-[#5C5C54]">
-                    {restaurant.cuisine} · {restaurant.priceRange}
-                  </p>
-                  <p className="text-[13px] text-[#B0AA9C] mt-1">{restaurant.location}</p>
-                </div>
-              </Link>
-            </motion.div>
-          ))}
-        </div>
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+        )}
 
         <Link
           to="/restaurants"
@@ -303,7 +308,8 @@ const Home = () => {
             className="text-[28px] md:text-[36px] text-[#FDFBF6] mb-6 max-w-xl mx-auto leading-tight"
             style={{ fontFamily: "'Fraunces', serif" }}
           >
-            Fill more tables, <span className="italic text-[#B8863B]">answer fewer calls.</span>
+            Fill more tables,{" "}
+            <span className="italic text-[#B8863B]">answer fewer calls.</span>
           </h2>
           <Link
             to="/register"

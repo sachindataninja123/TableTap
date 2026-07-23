@@ -24,7 +24,7 @@ export const loginUser = createAsyncThunk(
     try {
       const res = await axiosInstance.post("/auth/login", formData);
 
-      return res.data;
+      return res.data.data;
     } catch (error) {
       const message = error.response?.data?.message || "Login failed";
       return rejectWithValue(message);
@@ -101,7 +101,7 @@ const authSlice = createSlice({
       })
       .addCase(loginUser.fulfilled, (state, action) => {
         state.loading = false;
-        state.user = action.payload;
+        state.user = action.payload.data;
         ((state.isAuthenticated = true),
           toast.success("Logged in successfully"));
       })
@@ -125,10 +125,10 @@ const authSlice = createSlice({
       .addCase(getMe.pending, (state) => {
         state.checkingSession = true;
       })
-      .addCase(getMe.fulfilled, (state) => {
+      .addCase(getMe.fulfilled, (state, action) => {
         ((state.loading = false), (state.user = null));
         state.checkingSession = false;
-        state.user = action.payload;
+        state.user = action.payload.data;
         state.isAuthenticated = true;
         state.authChecked = true;
       })

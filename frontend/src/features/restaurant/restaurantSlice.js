@@ -12,7 +12,7 @@ export const fetchRestaurants = createAsyncThunk(
         params: queryParams,
       });
 
-      return res.data;
+      return res.data.data;
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch restaurants",
@@ -27,7 +27,7 @@ export const fetchFeaturedRestaurants = createAsyncThunk(
     try {
       const res = await axiosInstance.get("/restaurants/featured");
 
-      return res.data;
+      return res.data.data;
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch featured restaurants",
@@ -42,7 +42,7 @@ export const fetchRestaurantBySlug = createAsyncThunk(
     try {
       const res = await axiosInstance.get(`/restaurants/${slug}`);
 
-      return res.data;
+      return res.data.data;
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Restaurant not found",
@@ -52,7 +52,7 @@ export const fetchRestaurantBySlug = createAsyncThunk(
 );
 
 export const fetchRestaurantAvailability = createAsyncThunk(
-  "restaurant/fetchRestaurantBySlug",
+  "restaurant/fetchRestaurantAvailability",
   async ({ id, date }, { rejectWithValue }) => {
     try {
       const res = await axiosInstance.get(`/restaurants/${id}/availability`, {
@@ -123,7 +123,7 @@ export const fetchMyRestaurants = createAsyncThunk(
     try {
       const res = await axiosInstance.get("/restaurants/my-restaurants");
 
-      return res.data;
+      return res.data.data;
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to get my restaurant",
@@ -158,7 +158,7 @@ export const setOpeningHours = createAsyncThunk(
   "restaurant/setOpeningHours",
   async ({ id, hoursData }, { rejectWithValue }) => {
     try {
-      const res = await axiosInstance.post(
+      const res = await axiosInstance.patch(
         `/restaurants/${id}/hours`,
         hoursData,
       );
@@ -291,6 +291,9 @@ const restaurantSlice = createSlice({
   initialState,
   reducers: {
     clearRestaurantError: (state) => {
+      state.error = null;
+    },
+    clearCurrentRestaurant: (state) => {
       state.currentRestaurant = null;
       state.availability = null;
     },
