@@ -49,7 +49,7 @@ export const getMe = createAsyncThunk(
   "auth/getMe",
   async (_, { rejectWithValue }) => {
     try {
-      const res = await axiosInstance.get(".auth/get-me");
+      const res = await axiosInstance.get("/auth/get-me");
       return res.data;
     } catch (error) {
       const message = error.response?.data?.message || "Not authenticated";
@@ -64,6 +64,7 @@ const initialState = {
   user: null,
   isAuthenticated: false,
   loading: false,
+  checkingSession: false,
   error: null,
   authChecked: false,
 };
@@ -122,11 +123,19 @@ const authSlice = createSlice({
 
       //get current user
       .addCase(getMe.pending, (state) => {
-        state.loading = true;
+        state.checkingSession = true;
       })
       .addCase(getMe.fulfilled, (state) => {
         ((state.loading = false), (state.user = null));
+        state.checkingSession = false;
+        state.user = action.payload;
         state.isAuthenticated = true;
+        state.authChecked = true;
+      })
+      .addCase(getMe.rejected, (state) => {
+        state.checkingSession = false;
+        state.user = null;
+        state.isAuthenticated = false;
         state.authChecked = true;
       });
   },
