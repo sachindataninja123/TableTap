@@ -1,16 +1,18 @@
 import { useState } from "react";
 import { NavLink, Link } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import {motion , AnimatePresence} from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion";
 import { HiMenu, HiX } from "react-icons/hi";
 import { logoutUser } from "../../features/auth/authSlice";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [hovered, setHovered] = useState(null);
-  
+
   const { user, isAuthenticated } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
+
+  console.log(user , isAuthenticated)
 
   const publicLinks = [{ label: "Restaurants", to: "/restaurants" }];
 
@@ -65,18 +67,25 @@ const Navbar = () => {
                 onMouseEnter={() => setHovered(link.to)}
                 className={({ isActive }) =>
                   `relative px-4 py-2 text-[13px] font-medium tracking-wide uppercase transition-colors ${
-                    isActive ? "text-[#16281F]" : "text-[#5C5C54] hover:text-[#16281F]"
+                    isActive
+                      ? "text-[#16281F]"
+                      : "text-[#5C5C54] hover:text-[#16281F]"
                   }`
                 }
               >
                 {({ isActive }) => (
                   <>
                     {link.label}
-                    {(hovered === link.to || (isActive && hovered === null)) && (
+                    {(hovered === link.to ||
+                      (isActive && hovered === null)) && (
                       <motion.div
                         layoutId="navIndicator"
                         className="absolute left-3 right-3 -bottom-px h-0.5 bg-[#B8863B]"
-                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 380,
+                          damping: 30,
+                        }}
                       />
                     )}
                   </>
@@ -94,7 +103,7 @@ const Navbar = () => {
               <>
                 <Link
                   to="/profile"
-                  className="text-[13px] font-medium text-[#5C5C54] hover:text-[#16281F] transition-colors"
+                  className="text-[13px] font-medium uppercase px-4 py-2 rounded-full hover:bg-[#16281F] text-[#FDFBF6] bg-[#3F6B4F] transition-colors"
                 >
                   {user?.name?.split(" ")[0] || "Profile"}
                 </Link>
