@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "../../api/axiosInstance";
 import toast from "react-hot-toast";
+import { updateProfile, updateAvatar } from "../user/userSlice";
 
 // ===== THUNKS =====
 
@@ -137,6 +138,17 @@ const authSlice = createSlice({
         state.user = null;
         state.isAuthenticated = false;
         state.authChecked = true;
+      })
+
+      .addCase(updateProfile.fulfilled, (state, action) => {
+        if (action.payload?.data) {
+          state.user = action.payload.data;
+        }
+      })
+      .addCase(updateAvatar.fulfilled, (state, action) => {
+        if (action.payload?.data) {
+          state.user = action.payload.data;
+        }
       });
   },
 });
