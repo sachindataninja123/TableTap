@@ -11,6 +11,7 @@ import RestaurantList from "../pages/customer/RestaurantList";
 import RestaurantDetail from "../pages/customer/RestaurantDetail";
 import MyBookings from "../pages/customer/MyBookings";
 import Profile from "../pages/customer/Profile";
+import BookingForm from "../pages/customer/BookingForm";
 
 // Owner pages
 import OwnerDashboard from "../pages/owner/OwnerDashboard";
@@ -21,6 +22,7 @@ import MyRestaurant from "../pages/owner/MyRestaurant";
 import AdminDashboard from "../pages/admin/AdminDashboard";
 import ManageRestaurants from "../pages/admin/ManageRestaurants";
 import ManageUsers from "../pages/admin/ManageUsers";
+
 
 const AppRoutes = () => {
   return (
@@ -33,6 +35,14 @@ const AppRoutes = () => {
       <Route path="/register" element={<Register />} />
 
       {/* Customer only */}
+      <Route
+        path="/book/:restaurantId"
+        element={
+          <ProtectedRoute allowedRoles={["user"]}>
+            <BookingForm />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/my-bookings"
         element={
@@ -103,7 +113,10 @@ const AppRoutes = () => {
       />
 
       {/* 404 fallback */}
-      <Route path="*" element={<div className="p-10 text-center">Page not found</div>} />
+      <Route
+        path="*"
+        element={<div className="p-10 text-center">Page not found</div>}
+      />
     </Routes>
   );
 };
