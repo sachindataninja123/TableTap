@@ -18,11 +18,6 @@ const RestaurantDetail = () => {
     availabilityLoading,
   } = useSelector((state) => state.restaurant);
 
-  console.log(
-    "availability" , 
-    availability,
-  );
-
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0],
   );
