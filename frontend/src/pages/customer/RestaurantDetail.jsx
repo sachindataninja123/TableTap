@@ -11,12 +11,20 @@ import {
 const RestaurantDetail = () => {
   const { slug } = useParams();
   const dispatch = useDispatch();
-  const { currentRestaurant, detailLoading, availability, availabilityLoading } = useSelector(
-    (state) => state.restaurant
+  const {
+    currentRestaurant,
+    detailLoading,
+    availability,
+    availabilityLoading,
+  } = useSelector((state) => state.restaurant);
+
+  console.log(
+    "availability" , 
+    availability,
   );
 
   const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split("T")[0]
+    new Date().toISOString().split("T")[0],
   );
 
   useEffect(() => {
@@ -27,7 +35,10 @@ const RestaurantDetail = () => {
   useEffect(() => {
     if (currentRestaurant?._id) {
       dispatch(
-        fetchRestaurantAvailability({ id: currentRestaurant._id, date: selectedDate })
+        fetchRestaurantAvailability({
+          id: currentRestaurant._id,
+          date: selectedDate,
+        }),
       );
     }
   }, [dispatch, currentRestaurant?._id, selectedDate]);
@@ -43,11 +54,18 @@ const RestaurantDetail = () => {
   const r = currentRestaurant;
 
   return (
-    <div className="bg-[#FDFBF6] min-h-screen" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div
+      className="bg-[#FDFBF6] min-h-screen"
+      style={{ fontFamily: "'Inter', sans-serif" }}
+    >
       {/* Hero image */}
       <div className="h-70 md:h-95 bg-[#E7E2D6] relative">
         {r.image?.url ? (
-          <img src={r.image.url} alt={r.name} className="w-full h-full object-cover" />
+          <img
+            src={r.image.url}
+            alt={r.name}
+            className="w-full h-full object-cover"
+          />
         ) : (
           <div
             className="w-full h-full flex items-center justify-center text-[#B0AA9C] text-[24px]"
@@ -75,13 +93,15 @@ const RestaurantDetail = () => {
         <div className="md:col-span-2">
           <div className="flex items-center gap-4 mb-6 text-[14px] text-[#5C5C54]">
             <span className="flex items-center gap-1.5">
-              <FiStar className="text-[#B8863B]" /> {r.rating || "New"} ({r.reviewCount || 0})
+              <FiStar className="text-[#B8863B]" /> {r.rating || "New"} (
+              {r.reviewCount || 0})
             </span>
             <span className="flex items-center gap-1.5">
               <FiMapPin className="text-[#B8863B]" /> {r.location}
             </span>
             <span className="flex items-center gap-1.5">
-              <FiClock className="text-[#B8863B]" /> {r.openingTime} – {r.closingTime}
+              <FiClock className="text-[#B8863B]" /> {r.openingTime} –{" "}
+              {r.closingTime}
             </span>
           </div>
 
@@ -91,7 +111,9 @@ const RestaurantDetail = () => {
           >
             About
           </h2>
-          <p className="text-[15px] text-[#5C5C54] leading-relaxed mb-8">{r.description}</p>
+          <p className="text-[15px] text-[#5C5C54] leading-relaxed mb-8">
+            {r.description}
+          </p>
 
           <h2
             className="text-[22px] text-[#16281F] mb-3"
@@ -113,7 +135,8 @@ const RestaurantDetail = () => {
             <div className="col-span-2">
               <p className="text-[#B0AA9C] mb-1">Address</p>
               <p className="text-[#16281F]">
-                {r.address?.street}, {r.address?.city}, {r.address?.state} {r.address?.pincode}
+                {r.address?.street}, {r.address?.city}, {r.address?.state}{" "}
+                {r.address?.pincode}
               </p>
             </div>
           </div>
@@ -142,7 +165,9 @@ const RestaurantDetail = () => {
               Check availability
             </h3>
 
-            <label className="block text-[13px] font-medium text-[#16281F] mb-1.5">Date</label>
+            <label className="block text-[13px] font-medium text-[#16281F] mb-1.5">
+              Date
+            </label>
             <input
               type="date"
               value={selectedDate}
@@ -152,13 +177,19 @@ const RestaurantDetail = () => {
             />
 
             {availabilityLoading ? (
-              <p className="text-[13px] text-[#B0AA9C] text-center py-4">Checking slots...</p>
+              <p className="text-[13px] text-[#B0AA9C] text-center py-4">
+                Checking slots...
+              </p>
             ) : availability?.availability?.length > 0 ? (
               <div className="grid grid-cols-2 gap-2 mb-2">
                 {availability.availability.map((slot) => (
                   <Link
                     key={slot.slot}
-                    to={slot.isAvailable ? `/book/${r._id}?date=${selectedDate}&time=${encodeURIComponent(slot.slot)}` : "#"}
+                    to={
+                      slot.isAvailable
+                        ? `/book/${r._id}?date=${selectedDate}&time=${encodeURIComponent(slot.slot)}`
+                        : "#"
+                    }
                     className={`text-center py-2.5 rounded-lg text-[13px] font-medium border transition-colors ${
                       slot.isAvailable
                         ? "border-[#B8863B] text-[#16281F] hover:bg-[#B8863B] hover:text-white cursor-pointer"

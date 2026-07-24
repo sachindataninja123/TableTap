@@ -8,7 +8,7 @@ export const createBooking = createAsyncThunk(
   "booking/createBooking",
   async (bookingData, { rejectWithValue }) => {
     try {
-      const res = await axiosInstance.post("/bookings", bookingData);
+      const res = await axiosInstance.post("/bookings/create", bookingData);
       return res.data.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to create booking");

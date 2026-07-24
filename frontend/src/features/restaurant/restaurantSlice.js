@@ -59,7 +59,7 @@ export const fetchRestaurantAvailability = createAsyncThunk(
         params: { date },
       });
 
-      return res.data;
+      return res.data.data;
 
       return res.data;
     } catch (error) {

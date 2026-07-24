@@ -12,8 +12,6 @@ const Navbar = () => {
   const { user, isAuthenticated } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
 
-  console.log(user , isAuthenticated)
-
   const publicLinks = [{ label: "Restaurants", to: "/restaurants" }];
 
   const roleLinks = {
