@@ -181,7 +181,7 @@ export const fetchAllRestaurantsAdmin = createAsyncThunk(
       const res = await axiosInstance.get("/restaurants/admin/all", {
         params: queryParams,
       });
-      return res.data;
+      return res.data.data;
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch restaurants",

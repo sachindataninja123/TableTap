@@ -54,11 +54,11 @@ const ManageRestaurants = () => {
 
         {adminLoading ? (
           <p className="text-[#B0AA9C] text-center py-16">Loading...</p>
-        ) : adminRestaurants.length === 0 ? (
+        ) : adminRestaurants?.length === 0 ? (
           <p className="text-[#B0AA9C] text-center py-16">No restaurants found</p>
         ) : (
           <div className="space-y-3">
-            {adminRestaurants.map((r) => (
+            {adminRestaurants?.map((r) => (
               <div key={r._id} className="bg-white border border-[#E7E2D6] rounded-xl p-5 flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
