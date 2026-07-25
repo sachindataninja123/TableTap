@@ -4,6 +4,20 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { expireStaleBookings } from "../utils/expireStaleBookings.js";
 
+// Converts a date + a slot string like "1:00 PM" into a real Date object
+// so it can be compared against the current moment
+const parseSlotDateTime = (dateStr, timeStr) => {
+  const [time, modifier] = timeStr.trim().split(" ");
+  let [hours, minutes] = time.split(":").map(Number);
+
+  if (modifier?.toUpperCase() === "PM" && hours !== 12) hours += 12;
+  if (modifier?.toUpperCase() === "AM" && hours === 12) hours = 0;
+
+  const dateTime = new Date(dateStr);
+  dateTime.setHours(hours, minutes, 0, 0);
+  return dateTime;
+};
+
 // Shared helper: checks if a restaurant has enough free seats
 // for a given date/time/guest count. Reused by createBooking.
 const checkSlotAvailability = async (
@@ -86,13 +100,13 @@ export const createBooking = async (req, res) => {
       throw new ApiError(400, "Please provide all required booking details");
     }
 
-    // Prevent booking in the past
     const requestedDate = new Date(bookingDate);
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
 
-    if (requestedDate < now) {
-      throw new ApiError(400, "Cannot book a date in the past");
+    // Blocks both past dates AND past time-slots on today's date
+    const slotDateTime = parseSlotDateTime(bookingDate, bookingTime);
+
+    if (slotDateTime < new Date()) {
+      throw new ApiError(400, "This time slot has already passed");
     }
 
     // Validate availability BEFORE creating — this is the check
