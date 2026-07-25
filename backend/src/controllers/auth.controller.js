@@ -120,12 +120,14 @@ export const getMe = async (req, res) => {
 // @route   POST /api/auth/logOut
 export const logOutUser = async (req, res) => {
   try {
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    };
+
     return res
-      .clearCookie("token", {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-      })
+      .clearCookie("token", cookieOptions)
       .status(200)
       .json(new ApiResponse(200, null, "User logged out successfully"));
   } catch (error) {
