@@ -8,6 +8,19 @@ import {
   clearCurrentRestaurant,
 } from "../../features/restaurant/restaurantSlice";
 
+const isSlotPassed = (dateStr, timeStr) => {
+  const [time, modifier] = timeStr.trim().split(" ");
+  let [hours, minutes] = time.split(":").map(Number);
+
+  if (modifier?.toUpperCase() === "PM" && hours !== 12) hours += 12;
+  if (modifier?.toUpperCase() === "AM" && hours === 12) hours = 0;
+
+  const slotDateTime = new Date(dateStr);
+  slotDateTime.setHours(hours, minutes, 0, 0);
+
+  return slotDateTime < new Date();
+};
+
 const RestaurantDetail = () => {
   const { slug } = useParams();
   const dispatch = useDispatch();
@@ -177,24 +190,32 @@ const RestaurantDetail = () => {
               </p>
             ) : availability?.availability?.length > 0 ? (
               <div className="grid grid-cols-2 gap-2 mb-2">
-                {availability.availability.map((slot) => (
-                  <Link
-                    key={slot.slot}
-                    to={
-                      slot.isAvailable
-                        ? `/book/${r._id}?date=${selectedDate}&time=${encodeURIComponent(slot.slot)}`
-                        : "#"
-                    }
-                    className={`text-center py-2.5 rounded-lg text-[13px] font-medium border transition-colors ${
-                      slot.isAvailable
-                        ? "border-[#B8863B] text-[#16281F] hover:bg-[#B8863B] hover:text-white cursor-pointer"
-                        : "border-[#E7E2D6] text-[#B0AA9C] cursor-not-allowed"
-                    }`}
-                    onClick={(e) => !slot.isAvailable && e.preventDefault()}
-                  >
-                    {slot.slot}
-                  </Link>
-                ))}
+                {availability.availability.map((slot) => {
+                  const passed = isSlotPassed(selectedDate, slot.slot);
+                  const bookable = slot.isAvailable && !passed;
+
+                  return (
+                    <Link
+                      key={slot.slot}
+                      to={
+                        bookable
+                          ? `/book/${r._id}?date=${selectedDate}&time=${encodeURIComponent(slot.slot)}`
+                          : "#"
+                      }
+                      className={`text-center py-2.5 rounded-lg text-[13px] font-medium border transition-colors ${
+                        bookable
+                          ? "border-[#B8863B] text-[#16281F] hover:bg-[#B8863B] hover:text-white cursor-pointer"
+                          : "border-[#E7E2D6] text-[#B0AA9C] cursor-not-allowed"
+                      }`}
+                      onClick={(e) => !bookable && e.preventDefault()}
+                    >
+                      {slot.slot}
+                      {passed && (
+                        <span className="block text-[10px] mt-0.5">Passed</span>
+                      )}
+                    </Link>
+                  );
+                })}
               </div>
             ) : (
               <p className="text-[13px] text-[#B0AA9C] text-center py-4">

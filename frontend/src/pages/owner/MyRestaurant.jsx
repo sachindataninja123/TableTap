@@ -29,13 +29,14 @@ const statusColors = {
 const MyRestaurant = () => {
   const dispatch = useDispatch();
   const { myRestaurants, myRestaurantsLoading, actionLoading } = useSelector(
-    (state) => state.restaurant
+    (state) => state.restaurant,
   );
 
   // View state: null = grid view, "new" = create form, "restaurantId" = edit existing form
   const [selectedRestaurantId, setSelectedRestaurantId] = useState(null);
   const [activeTab, setActiveTab] = useState("details"); // "details" | "hours"
   const [slotsInput, setSlotsInput] = useState("");
+  const [tagsInput, setTagsInput] = useState("");
 
   // Delete modal state
   const [deletingRestaurant, setDeletingRestaurant] = useState(null); // holds restaurant object to delete
@@ -44,7 +45,7 @@ const MyRestaurant = () => {
 
   // Selected restaurant object (if editing)
   const selectedRestaurant = myRestaurants?.find(
-    (r) => r._id === selectedRestaurantId
+    (r) => r._id === selectedRestaurantId,
   );
 
   useEffect(() => {
@@ -72,6 +73,7 @@ const MyRestaurant = () => {
         closingTime: selectedRestaurant.closingTime || "",
       });
       setSlotsInput((selectedRestaurant.availableSlots || []).join(", "));
+      setTagsInput((selectedRestaurant.tags || []).join(", "));
     } else if (selectedRestaurantId === "new") {
       reset({
         name: "",
@@ -91,11 +93,17 @@ const MyRestaurant = () => {
         closingTime: "",
       });
       setSlotsInput("");
+      setTagsInput("");
     }
   }, [selectedRestaurant, selectedRestaurantId, reset]);
 
   // Submit Details (Create or Update)
   const onSubmitDetails = (data) => {
+    const tags = tagsInput
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+
     const payload = {
       name: data.name,
       description: data.description,
@@ -112,11 +120,12 @@ const MyRestaurant = () => {
       phone: data.phone,
       email: data.email,
       website: data.website,
+      tags
     };
 
     if (selectedRestaurant) {
       dispatch(
-        updateRestaurant({ id: selectedRestaurant._id, formData: payload })
+        updateRestaurant({ id: selectedRestaurant._id, formData: payload }),
       );
     } else {
       dispatch(createRestaurant(payload))
@@ -142,7 +151,7 @@ const MyRestaurant = () => {
           closingTime: data.closingTime,
           availableSlots,
         },
-      })
+      }),
     );
   };
 
@@ -318,7 +327,10 @@ const MyRestaurant = () => {
                         className="w-9 h-9 text.red-600 hover:text-red-700 border border-red-200 hover:bg-red-50 rounded-full transition-colors flex items-center justify-center"
                         title="Delete Restaurant"
                       >
-                        <HiOutlineTrash size={18} className="text-base text-red-600" />
+                        <HiOutlineTrash
+                          size={18}
+                          className="text-base text-red-600"
+                        />
                       </button>
                     </div>
                   </div>
@@ -426,7 +438,10 @@ const MyRestaurant = () => {
 
             {/* FORM TAB 1: DETAILS */}
             {(activeTab === "details" || selectedRestaurantId === "new") && (
-              <form onSubmit={handleSubmit(onSubmitDetails)} className="space-y-4">
+              <form
+                onSubmit={handleSubmit(onSubmitDetails)}
+                className="space-y-4"
+              >
                 <input
                   {...register("name", { required: true })}
                   placeholder="Restaurant name"
@@ -513,6 +528,37 @@ const MyRestaurant = () => {
                   />
                 </div>
 
+                <div>
+                  <label className="block text-[13px] font-medium text-[#16281F] mb-1.5">
+                    Tags{" "}
+                    <span className="text-[#B0AA9C] font-normal">
+                      (comma-separated)
+                    </span>
+                  </label>
+                  <input
+                    value={tagsInput}
+                    onChange={(e) => setTagsInput(e.target.value)}
+                    placeholder="Rooftop, Live music, Pet-friendly, Vegan options"
+                    className="w-full px-4 py-3 rounded-lg border border-[#E7E2D6] bg-white text-[14px] focus:outline-none focus:ring-2 focus:ring-[#B8863B]/40"
+                  />
+                  {tagsInput && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {tagsInput
+                        .split(",")
+                        .map((t) => t.trim())
+                        .filter(Boolean)
+                        .map((tag, i) => (
+                          <span
+                            key={i}
+                            className="text-[11px] px-2.5 py-1 rounded-full bg-[#E7E2D6]/50 text-[#5C5C54]"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                    </div>
+                  )}
+                </div>
+
                 <button
                   type="submit"
                   disabled={actionLoading}
@@ -521,15 +567,18 @@ const MyRestaurant = () => {
                   {actionLoading
                     ? "Saving..."
                     : selectedRestaurant
-                    ? "Save changes"
-                    : "Submit for approval"}
+                      ? "Save changes"
+                      : "Submit for approval"}
                 </button>
               </form>
             )}
 
             {/* FORM TAB 2: HOURS & SLOTS */}
             {selectedRestaurant && activeTab === "hours" && (
-              <form onSubmit={handleSubmit(onSubmitHours)} className="space-y-4">
+              <form
+                onSubmit={handleSubmit(onSubmitHours)}
+                className="space-y-4"
+              >
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[12px] uppercase tracking-wider text-[#5C5C54] font-medium mb-1.5">
@@ -606,7 +655,8 @@ const MyRestaurant = () => {
                 <span className="font-semibold text-[#16281F]">
                   "{deletingRestaurant.name}"
                 </span>
-                ? This will permanently remove its listings, menu data, and booking slots.
+                ? This will permanently remove its listings, menu data, and
+                booking slots.
               </p>
 
               <div className="flex gap-3 justify-end">
