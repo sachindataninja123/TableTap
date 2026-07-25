@@ -8,18 +8,20 @@ import {
   HiOutlineClock,
   HiOutlineArrowLeft,
   HiOutlineLocationMarker,
+  HiOutlineTrash,
+  HiOutlineX,
 } from "react-icons/hi";
-import { FiStar } from "react-icons/fi";
 import {
   fetchMyRestaurants,
   createRestaurant,
   updateRestaurant,
   uploadRestaurantImage,
   setOpeningHours,
+  deleteRestaurant, // Ensure this thunk exists in your restaurantSlice
 } from "../../features/restaurant/restaurantSlice";
 
 const statusColors = {
-  pending: "bg-[#B8863B]/15 text-[#c57f16]",
+  pending: "bg-[#B8863B]/15 text-[#B8863B]",
   approved: "bg-[#3F6B4F]/15 text-[#3F6B4F]",
   rejected: "bg-[#A63D2F]/15 text-[#A63D2F]",
 };
@@ -27,18 +29,22 @@ const statusColors = {
 const MyRestaurant = () => {
   const dispatch = useDispatch();
   const { myRestaurants, myRestaurantsLoading, actionLoading } = useSelector(
-    (state) => state.restaurant,
+    (state) => state.restaurant
   );
 
+  // View state: null = grid view, "new" = create form, "restaurantId" = edit existing form
   const [selectedRestaurantId, setSelectedRestaurantId] = useState(null);
   const [activeTab, setActiveTab] = useState("details"); // "details" | "hours"
   const [slotsInput, setSlotsInput] = useState("");
+
+  // Delete modal state
+  const [deletingRestaurant, setDeletingRestaurant] = useState(null); // holds restaurant object to delete
 
   const { register, handleSubmit, reset } = useForm();
 
   // Selected restaurant object (if editing)
   const selectedRestaurant = myRestaurants?.find(
-    (r) => r._id === selectedRestaurantId,
+    (r) => r._id === selectedRestaurantId
   );
 
   useEffect(() => {
@@ -110,7 +116,7 @@ const MyRestaurant = () => {
 
     if (selectedRestaurant) {
       dispatch(
-        updateRestaurant({ id: selectedRestaurant._id, formData: payload }),
+        updateRestaurant({ id: selectedRestaurant._id, formData: payload })
       );
     } else {
       dispatch(createRestaurant(payload))
@@ -136,7 +142,7 @@ const MyRestaurant = () => {
           closingTime: data.closingTime,
           availableSlots,
         },
-      }),
+      })
     );
   };
 
@@ -146,6 +152,20 @@ const MyRestaurant = () => {
     if (file && selectedRestaurant) {
       dispatch(uploadRestaurantImage({ id: selectedRestaurant._id, file }));
     }
+  };
+
+  // Delete Action Handler
+  const handleConfirmDelete = () => {
+    if (!deletingRestaurant) return;
+    dispatch(deleteRestaurant(deletingRestaurant._id))
+      .unwrap()
+      .then(() => {
+        setDeletingRestaurant(null);
+        if (selectedRestaurantId === deletingRestaurant._id) {
+          setSelectedRestaurantId(null);
+        }
+      })
+      .catch(() => {});
   };
 
   if (myRestaurantsLoading) {
@@ -278,7 +298,7 @@ const MyRestaurant = () => {
                         className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[13px] font-medium text-[#16281F] border border-[#E7E2D6] rounded-full hover:bg-[#E7E2D6]/40 transition-colors"
                       >
                         <HiOutlinePencil className="text-sm" />
-                        Edit Details
+                        Edit
                       </button>
 
                       <button
@@ -289,7 +309,16 @@ const MyRestaurant = () => {
                         className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[13px] font-medium text-[#B8863B] border border-[#B8863B]/30 rounded-full hover:bg-[#B8863B]/10 transition-colors"
                       >
                         <HiOutlineClock className="text-sm" />
-                        Hours & Slots
+                        Slots
+                      </button>
+
+                      {/* Delete Button */}
+                      <button
+                        onClick={() => setDeletingRestaurant(res)}
+                        className="w-9 h-9 text.red-600 hover:text-red-700 border border-red-200 hover:bg-red-50 rounded-full transition-colors flex items-center justify-center"
+                        title="Delete Restaurant"
+                      >
+                        <HiOutlineTrash size={18} className="text-base text-red-600" />
                       </button>
                     </div>
                   </div>
@@ -320,15 +349,28 @@ const MyRestaurant = () => {
                   : "List new restaurant"}
               </h1>
 
-              {selectedRestaurant && (
-                <span
-                  className={`text-[12px] font-medium px-3 py-1.5 rounded-full capitalize ${
-                    statusColors[selectedRestaurant.status]
-                  }`}
-                >
-                  {selectedRestaurant.status}
-                </span>
-              )}
+              <div className="flex items-center gap-3">
+                {selectedRestaurant && (
+                  <>
+                    <span
+                      className={`text-[12px] font-medium px-3 py-1.5 rounded-full capitalize ${
+                        statusColors[selectedRestaurant.status]
+                      }`}
+                    >
+                      {selectedRestaurant.status}
+                    </span>
+
+                    {/* Delete button inside edit view */}
+                    <button
+                      onClick={() => setDeletingRestaurant(selectedRestaurant)}
+                      className="flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-red-200 text-red-600 text-[12px] font-medium hover:bg-red-50 transition-colors"
+                    >
+                      <HiOutlineTrash className="text-sm" />
+                      Delete
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Sub-navigation tabs (if editing existing) */}
@@ -357,7 +399,7 @@ const MyRestaurant = () => {
               </div>
             )}
 
-            {/* Photo Section (Only when editing an existing restaurant) */}
+            {/* Photo Section */}
             {selectedRestaurant && activeTab === "details" && (
               <div className="mb-8">
                 <div className="aspect-3/1 bg-[#E7E2D6] rounded-xl overflow-hidden mb-3">
@@ -384,10 +426,7 @@ const MyRestaurant = () => {
 
             {/* FORM TAB 1: DETAILS */}
             {(activeTab === "details" || selectedRestaurantId === "new") && (
-              <form
-                onSubmit={handleSubmit(onSubmitDetails)}
-                className="space-y-4"
-              >
+              <form onSubmit={handleSubmit(onSubmitDetails)} className="space-y-4">
                 <input
                   {...register("name", { required: true })}
                   placeholder="Restaurant name"
@@ -482,18 +521,15 @@ const MyRestaurant = () => {
                   {actionLoading
                     ? "Saving..."
                     : selectedRestaurant
-                      ? "Save changes"
-                      : "Submit for approval"}
+                    ? "Save changes"
+                    : "Submit for approval"}
                 </button>
               </form>
             )}
 
             {/* FORM TAB 2: HOURS & SLOTS */}
             {selectedRestaurant && activeTab === "hours" && (
-              <form
-                onSubmit={handleSubmit(onSubmitHours)}
-                className="space-y-4"
-              >
+              <form onSubmit={handleSubmit(onSubmitHours)} className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[12px] uppercase tracking-wider text-[#5C5C54] font-medium mb-1.5">
@@ -541,6 +577,57 @@ const MyRestaurant = () => {
           </div>
         )}
       </div>
+
+      {/* ================= DELETE CONFIRMATION MODAL ================= */}
+      <AnimatePresence>
+        {deletingRestaurant && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white border border-[#E7E2D6] rounded-2xl max-w-md w-full p-6 shadow-2xl relative"
+            >
+              <button
+                onClick={() => setDeletingRestaurant(null)}
+                className="absolute top-4 right-4 text-[#B0AA9C] hover:text-[#16281F]"
+              >
+                <HiOutlineX className="text-xl" />
+              </button>
+
+              <h3
+                className="text-[22px] text-[#16281F] mb-2"
+                style={{ fontFamily: "'Fraunces', serif" }}
+              >
+                Delete Restaurant?
+              </h3>
+              <p className="text-[14px] text-[#5C5C54] mb-6 leading-relaxed">
+                Are you sure you want to delete{" "}
+                <span className="font-semibold text-[#16281F]">
+                  "{deletingRestaurant.name}"
+                </span>
+                ? This will permanently remove its listings, menu data, and booking slots.
+              </p>
+
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setDeletingRestaurant(null)}
+                  className="px-5 py-2.5 rounded-full border border-[#E7E2D6] text-[13px] font-medium text-[#5C5C54] hover:text-[#16281F]"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmDelete}
+                  disabled={actionLoading}
+                  className="px-5 py-2.5 rounded-full bg-red-600 text-white text-[13px] font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
+                >
+                  {actionLoading ? "Deleting..." : "Yes, Delete Restaurant"}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

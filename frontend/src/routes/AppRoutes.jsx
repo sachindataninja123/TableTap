@@ -12,6 +12,7 @@ import RestaurantDetail from "../pages/customer/RestaurantDetail";
 import MyBookings from "../pages/customer/MyBookings";
 import Profile from "../pages/customer/Profile";
 import BookingForm from "../pages/customer/BookingForm";
+import BookingDetail from "../pages/customer/BookingDetail";
 
 // Owner pages
 import OwnerDashboard from "../pages/owner/OwnerDashboard";
@@ -22,7 +23,6 @@ import MyRestaurant from "../pages/owner/MyRestaurant";
 import AdminDashboard from "../pages/admin/AdminDashboard";
 import ManageRestaurants from "../pages/admin/ManageRestaurants";
 import ManageUsers from "../pages/admin/ManageUsers";
-
 
 const AppRoutes = () => {
   return (
@@ -48,6 +48,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute allowedRoles={["user"]}>
             <MyBookings />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/my-bookings/:id"
+        element={
+          <ProtectedRoute allowedRoles={["user"]}>
+            <BookingDetail />
           </ProtectedRoute>
         }
       />
